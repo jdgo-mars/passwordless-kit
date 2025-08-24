@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passwordless Kit Example</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        button { margin: 10px 5px; padding: 10px 20px; font-size: 16px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 15px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Passwordless Kit Demo</h1>
+    
+    <div>
+        <h2>Registration</h2>
+        <input type="text" id="username" placeholder="Enter username" value="testuser">
+        <button onclick="register()">Register Passkey</button>
+    </div>
+    
+    <div>
+        <h2>Authentication</h2>
+        <button onclick="authenticate()">Authenticate</button>
+    </div>
+    
+    <div>
+        <h2>Status</h2>
+        <button onclick="checkSupport()">Check Support</button>
+        <button onclick="checkPlatformAuth()">Check Platform Authenticator</button>
+    </div>
+    
+    <div id="output"></div>
+    
+    <script type="module">
+        import { PasswordlessKit } from '../dist/index.esm.js'
+        
+        const kit = new PasswordlessKit({
+            rpName: 'Passwordless Kit Demo',
+            userVerification: 'preferred'
+        })
+        
+        window.kit = kit
+        
+        window.register = async function() {
+            const output = document.getElementById('output')
+            const username = document.getElementById('username').value
+            
+            if (!username) {
+                output.innerHTML = '<div class="error">Please enter a username</div>'
+                return
+            }
+            
+            try {
+                output.innerHTML = '<div>Registering passkey...</div>'
+                const result = await kit.register({ username })
+                output.innerHTML = `
+                    <div class="success">Registration successful!</div>
+                    <pre>${JSON.stringify({
+                        credentialId: result.credentialId,
+                        publicKeyLength: result.publicKey.byteLength
+                    }, null, 2)}</pre>
+                `
+            } catch (error) {
+                output.innerHTML = `<div class="error">Registration failed: ${error.message}</div>`
+            }
+        }
+        
+        window.authenticate = async function() {
+            const output = document.getElementById('output')
+            
+            try {
+                output.innerHTML = '<div>Authenticating...</div>'
+                const result = await kit.authenticate()
+                output.innerHTML = `
+                    <div class="success">Authentication successful!</div>
+                    <pre>${JSON.stringify({
+                        credentialId: result.credentialId,
+                        userHandle: result.userHandle ? 'present' : 'null'
+                    }, null, 2)}</pre>
+                `
+            } catch (error) {
+                output.innerHTML = `<div class="error">Authentication failed: ${error.message}</div>`
+            }
+        }
+        
+        window.checkSupport = function() {
+            const output = document.getElementById('output')
+            const supported = kit.isSupported()
+            output.innerHTML = `<div class="${supported ? 'success' : 'error'}">WebAuthn supported: ${supported}</div>`
+        }
+        
+        window.checkPlatformAuth = async function() {
+            const output = document.getElementById('output')
+            try {
+                const available = await kit.isPlatformAuthenticatorAvailable()
+                output.innerHTML = `<div class="${available ? 'success' : 'error'}">Platform authenticator available: ${available}</div>`
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error checking platform authenticator: ${error.message}</div>`
+            }
+        }
+    </script>
+</body>
+</html>
